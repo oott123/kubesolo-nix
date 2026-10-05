@@ -1,0 +1,51 @@
+# Artifacts that build/download-deps.sh fetches for the online (non-offline) build.
+# Versions must follow the script at the pinned kubesolo revision.
+{
+  containerd = {
+    version = "2.2.5";
+    hash = {
+      amd64 = "sha256-1AMVV3c6jpadYEtO6AnGTtPGzQJNONUh2TmE+hfTe4k=";
+      arm64 = "sha256-rT967BaOu66NJMQS/dLogG2WWZdX9gMuOJl9YqEIFYo=";
+    };
+  };
+
+  crun = {
+    version = "1.26";
+    hash = {
+      amd64 = "sha256-izew+L+hcKnDOPqGmQKjOZEQEmTOB2TndqmXqNeH3IM=";
+      arm64 = "sha256-T6Yvb63SGh6kwfegQNTS309xIP7XiL936ez8qpIsQX0=";
+    };
+  };
+
+  cni-plugins = {
+    version = "v1.9.0";
+    hash = {
+      amd64 = "sha256-WMA3BUJukpZY9FqFHfFahtBu9oDKy/Py3BJ3McomXCg=";
+      arm64 = "sha256-JZbvVjKd0SaQJvRrjfJi8JukPJLb+5QOHmn7zMzTCik=";
+    };
+  };
+
+  images = {
+    # Must match types.DefaultCoreDNSImage.
+    coredns = {
+      imageName = "coredns/coredns";
+      imageTag = "1.14.4";
+      imageDigest = "sha256:3e98f280fd601b37411c5fb7075fd9f337833c480f1644970b727ae0af067782";
+      hash = {
+        amd64 = "sha256-USiCHj69d+L0vCyg6ZzyZKQJjOQcupXQwaAY1T6hdMw=";
+        arm64 = "sha256-BFyxSVCGmL59cd/pJMYrGEHey0vRJfrE85pGTo/3kZ0=";
+      };
+    };
+
+    # Must match types.DefaultSandboxImage. Upstream pulls the moving `latest` tag; pinned by digest here.
+    pause = {
+      imageName = "portainer/pause";
+      imageTag = "latest";
+      imageDigest = "sha256:df6d2fb5cff97c4070a12953a34a56422879f1e02b43400f1caf1cbd530458b1";
+      hash = {
+        amd64 = "sha256-ob/z81oTDejqdt1y6OXE6LklcX+CPXU1wCQb44Y4kMc=";
+        arm64 = "sha256-xsK1axsPALnsndv2fYf/hhN23aHctEwYEbPX9yQU4zY=";
+      };
+    };
+  };
+}
