@@ -64,7 +64,7 @@ services.kubesolo.registries = {
 };
 ```
 
-Each entry becomes `/var/lib/kubesolo/containerd/registry/<name>/hosts.toml`, which containerd reads on every pull, so changes need no restart. `server` defaults to the upstream registry and is used when all mirrors fail; set it to `null` to disable the fallback. Use `settings` for anything else `hosts.toml` supports (`override_path`, `ca`, `header`, ...), and the name `_default` to cover every registry without its own entry. Images must be referenced by their fully qualified name. See the [upstream documentation](https://github.com/portainer/kubesolo/blob/main/docs/configuration/registry.md).
+Each entry becomes `/var/lib/kubesolo/containerd/registry/<name>/hosts.toml`, which containerd reads on every pull, so changes need no restart. `server` defaults to the upstream registry and is used when all mirrors fail; set it to `null` to disable the fallback. Use `settings` for anything else `hosts.toml` supports (`override_path`, `ca`, `header`, ...), and the name `_default` to cover every registry without its own entry. Images must be referenced by their fully qualified name. The images KubeSolo pulls at startup because they are not embedded (local-path-provisioner, Portainer agent, d2k) use these mirrors too; upstream pulls them directly, and the package patches this. See the [upstream documentation](https://github.com/portainer/kubesolo/blob/main/docs/configuration/registry.md).
 
 ## Development
 

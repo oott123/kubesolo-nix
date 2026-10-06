@@ -1,0 +1,26 @@
+--- a/pkg/runtime/containerd/image.go
++++ b/pkg/runtime/containerd/image.go
+@@ -7,6 +7,8 @@
+ 	"os"
+ 
+ 	"github.com/containerd/containerd/v2/client"
++	"github.com/containerd/containerd/v2/core/remotes/docker"
++	"github.com/containerd/containerd/v2/core/remotes/docker/config"
+ 	"github.com/containerd/containerd/v2/pkg/namespaces"
+ 	"github.com/portainer/kubesolo/types"
+ 	"github.com/rs/zerolog/log"
+@@ -68,7 +70,13 @@
+ 	info, err := os.Stat(imageFile)
+ 	if err != nil || info.Size() == 0 {
+ 		log.Info().Str("component", "containerd").Str("image", imageRef).Msg("embedded image not available, pulling from registry")
+-		if _, pullErr := c.Pull(ctx, imageRef, client.WithPullUnpack); pullErr != nil {
++		// Resolve through the CRI registry host configuration, so mirrors in hosts.toml apply here too.
++		resolver := docker.NewResolver(docker.ResolverOptions{
++			Hosts: config.ConfigureHosts(ctx, config.HostOptions{
++				HostDir: config.HostDirFromRoot(s.containerdRegistryConfigDir),
++			}),
++		})
++		if _, pullErr := c.Pull(ctx, imageRef, client.WithPullUnpack, client.WithResolver(resolver)); pullErr != nil {
+ 			return fmt.Errorf("failed to pull image %s: %v", imageRef, pullErr)
+ 		}
+ 		return nil

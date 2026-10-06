@@ -59,6 +59,12 @@ buildGoModule (finalAttrs: {
     hash = "sha256-SeZlPc8YUUXMITllgvK0f6vHkuzgAmA/O0CkWBvKZr8=";
   };
 
+  patches = [
+    # Startup pulls images that are not embedded (local-path-provisioner, Portainer agent, d2k)
+    # with containerd's default resolver, which ignores the registry mirrors in hosts.toml.
+    ./registry-hosts-for-image-pull.patch
+  ];
+
   vendorHash = "sha256-ldNptIfy9iOmKPTeEN4BhMnfWQuk2Iic9CBB8WfB0/E=";
 
   subPackages = [
