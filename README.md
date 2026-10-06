@@ -30,10 +30,10 @@ The package builds KubeSolo from source. The artifacts upstream embeds into the 
 }
 ```
 
-The admin kubeconfig is written to `/var/lib/kubesolo/pki/admin/admin.kubeconfig`:
+The admin kubeconfig is written to `/var/lib/kubesolo/pki/admin/admin.kubeconfig`. With `services.kubesolo.kubectl.enable = true`, the module installs a `kubectl` that uses it by default:
 
 ```sh
-sudo kubectl --kubeconfig /var/lib/kubesolo/pki/admin/admin.kubeconfig get pods -A
+sudo kubectl get pods -A
 ```
 
 ## Options
@@ -43,6 +43,7 @@ sudo kubectl --kubeconfig /var/lib/kubesolo/pki/admin/admin.kubeconfig get pods 
 | `services.kubesolo.settings` | Rendered to `/etc/kubesolo/config.yaml`. Accepts every key from the [upstream config file](https://github.com/portainer/kubesolo/blob/main/docs/configuration/config-file.md). The service restarts when it changes. |
 | `services.kubesolo.environmentFile` | `KUBESOLO_*` variables kept out of the Nix store, such as `KUBESOLO_PORTAINER_EDGE_KEY`. They override `settings`. |
 | `services.kubesolo.extraFlags` | Extra command-line flags. Deprecated upstream. |
+| `services.kubesolo.kubectl.enable` | Installs a `kubectl` wrapper that sets `KUBECONFIG` to the admin kubeconfig unless it is already set. Use `services.kubesolo.kubectl.package` to pick the `kubectl` version. |
 | `services.kubesolo.openFirewall` | Opens TCP 6443 for the API server. |
 
 The module also loads the required kernel modules, enables IP forwarding and adds `cni0` to `networking.firewall.trustedInterfaces` so pods can reach the API server and CoreDNS.

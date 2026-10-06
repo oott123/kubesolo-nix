@@ -16,6 +16,22 @@ let
     }
     // cfg.settings
   );
+
+  kubeconfig = "${cfg.settings.path}/pki/admin/admin.kubeconfig";
+
+  # symlinkJoin keeps the shell completions and man pages of the original package.
+  kubectlWrapped = pkgs.symlinkJoin {
+    name = "kubesolo-${cfg.kubectl.package.name}";
+    paths = [
+      cfg.kubectl.package
+    ]
+    ++ lib.optional (cfg.kubectl.package ? man) cfg.kubectl.package.man;
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      wrapProgram $out/bin/kubectl --set-default KUBECONFIG ${kubeconfig}
+    '';
+    meta.mainProgram = "kubectl";
+  };
 in
 {
   options.services.kubesolo = {
@@ -72,6 +88,16 @@ in
       '';
     };
 
+    kubectl = {
+      enable = lib.mkEnableOption ''
+        a `kubectl` wrapper that uses the KubeSolo admin kubeconfig unless
+        {env}`KUBECONFIG` is already set. The kubeconfig is only readable by root,
+        so run it with `sudo`
+      '';
+
+      package = lib.mkPackageOption pkgs "kubectl" { };
+    };
+
     openFirewall = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -85,7 +111,7 @@ in
       /etc/kubesolo/config.yaml is generated from services.kubesolo.settings.
     '';
 
-    environment.systemPackages = [ cfg.package ];
+    environment.systemPackages = [ cfg.package ] ++ lib.optional cfg.kubectl.enable kubectlWrapped;
 
     # kubesoloctl reads this path by default.
     environment.etc."kubesolo/config.yaml".source = configFile;

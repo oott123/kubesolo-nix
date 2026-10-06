@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ ... }:
 
 {
   name = "kubesolo";
@@ -12,12 +12,10 @@
 
     services.kubesolo = {
       enable = true;
+      kubectl.enable = true;
       # The VM has no network access, so only images embedded in the binary are available.
       settings.storage.localPath.enabled = false;
     };
-
-    environment.systemPackages = [ pkgs.kubectl ];
-    environment.variables.KUBECONFIG = "/var/lib/kubesolo/pki/admin/admin.kubeconfig";
   };
 
   testScript = ''
