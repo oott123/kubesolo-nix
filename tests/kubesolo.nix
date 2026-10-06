@@ -13,6 +13,7 @@
     services.kubesolo = {
       enable = true;
       kubectl.enable = true;
+      registries."docker.io".mirrors = [ "https://mirror.example.com" ];
       # The VM has no network access, so only images embedded in the binary are available.
       settings.storage.localPath.enabled = false;
     };
@@ -34,5 +35,9 @@
     machine.wait_until_succeeds("kubectl wait --for=condition=Ready pod/pause --timeout=10s", timeout=300)
 
     machine.succeed("kubesoloctl config get network.mtu")
+
+    hosts = machine.succeed("cat /var/lib/kubesolo/containerd/registry/docker.io/hosts.toml")
+    assert 'server = "https://registry-1.docker.io"' in hosts, hosts
+    assert 'https://mirror.example.com' in hosts, hosts
   '';
 }

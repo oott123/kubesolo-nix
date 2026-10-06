@@ -34,6 +34,8 @@ let
   };
 in
 {
+  imports = [ ./registries.nix ];
+
   options.services.kubesolo = {
     enable = lib.mkEnableOption "KubeSolo, a single-node Kubernetes distribution";
 
