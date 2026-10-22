@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 
 let
   goarch =
@@ -24,6 +24,31 @@ let
     os = "linux";
     arch = goarch;
   };
+
+  kubesolo = pkgs.callPackage ../pkgs/kubesolo { };
+
+  # The same KubeSolo reporting another version, so the test can upgrade without a second release.
+  upgraded = kubesolo.overrideAttrs (old: {
+    version = "${old.version}-test";
+    inherit (old) src goModules;
+  });
+
+  # Fails the datastore check, so a switch to it must abort.
+  broken = pkgs.writeShellScriptBin "kubesolo" "exit 1" // {
+    version = "${kubesolo.version}-broken";
+  };
+
+  # Passes the datastore check but never runs KubeSolo, so it never becomes healthy.
+  unhealthy =
+    pkgs.writeShellScriptBin "kubesolo" ''
+      case "$1" in --upgrade-check-datastore=*) exec ${lib.getExe kubesolo} "$@" ;; esac
+      exec sleep infinity
+    ''
+    // {
+      version = "${kubesolo.version}-unhealthy";
+    };
+
+  state = "/var/lib/kubesolo/nixos-upgrade";
 in
 {
   name = "kubesolo";
@@ -51,7 +76,7 @@ in
         RemainAfterExit = true;
       };
       script = ''
-        ${pkgs.skopeo}/bin/skopeo --insecure-policy copy --dest-tls-verify=false \
+        ${pkgs.skopeo}/bin/skopeo --insecure-policy copy --retry-times 10 --dest-tls-verify=false \
           docker-archive:${localPathProvisionerImage} \
           docker://127.0.0.1:5000/rancher/local-path-provisioner:v0.0.36
       '';
@@ -61,6 +86,15 @@ in
       enable = true;
       kubectl.enable = true;
       registries."docker.io".mirrors = [ "http://127.0.0.1:5000" ];
+    };
+
+    specialisation = {
+      upgraded.configuration.services.kubesolo.package = upgraded;
+      broken.configuration.services.kubesolo.package = broken;
+      unhealthy.configuration.services.kubesolo = {
+        package = unhealthy;
+        upgrade.healthTimeout = 60;
+      };
     };
   };
 
@@ -90,5 +124,52 @@ in
     hosts = machine.succeed("cat /var/lib/kubesolo/containerd/registry/docker.io/hosts.toml")
     assert 'server = "https://registry-1.docker.io"' in hosts, hosts
     assert 'http://127.0.0.1:5000' in hosts, hosts
+
+    def switch(to):
+        return f"/run/booted-system/specialisation/{to}/bin/switch-to-configuration test"
+
+    def wait_ready():
+        machine.wait_until_succeeds("kubectl wait --for=condition=Ready node --all --timeout=10s", timeout=300)
+        machine.wait_until_succeeds("kubectl wait --for=condition=Ready pod/pause --timeout=10s", timeout=300)
+        # New connections through a ClusterIP, which kube-proxy has to route again after a restart.
+        machine.wait_until_succeeds("${pkgs.curl}/bin/curl -sSkf -m 5 https://10.43.0.1/readyz", timeout=120)
+
+    # The pod sandboxes and the pause pod all run the pause binary. A restart that lost them would
+    # start new ones.
+    pause_pids = "pgrep -x pause | sort"
+
+    with subtest("restarting KubeSolo keeps the pods running"):
+        before = machine.succeed(pause_pids)
+        machine.succeed("systemctl restart kubesolo")
+        wait_ready()
+        machine.sleep(30)
+        assert machine.succeed(pause_pids) == before
+
+    with subtest("a version that cannot open the datastore aborts the switch"):
+        pid = machine.succeed("systemctl show -P MainPID kubesolo")
+        machine.fail(switch("broken"))
+        assert machine.succeed("systemctl show -P MainPID kubesolo") == pid
+        machine.succeed("grep -qx v${kubesolo.version} ${state}/current")
+
+    with subtest("an upgrade backs up the datastore and waits for the new version"):
+        before = machine.succeed(pause_pids)
+        machine.succeed(switch("upgraded"))
+        machine.succeed(
+            "kubectl get node -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}'"
+            " | grep -q -- '+kubesolo-v${upgraded.version}$'"
+        )
+        machine.succeed("grep -qx from=v${kubesolo.version} ${state}/backup/manifest")
+        machine.fail("test -e ${state}/pending")
+        assert machine.succeed(pause_pids) == before
+        machine.succeed("kubectl create configmap upgraded")
+
+    with subtest("an unhealthy version fails the switch, and switching back restores the datastore"):
+        machine.fail(switch("unhealthy"))
+        machine.succeed("grep -qx v${unhealthy.version} ${state}/pending")
+        machine.succeed(switch("upgraded"))
+        machine.succeed("journalctl -u kubesolo | grep -q 'restored the datastore of v${upgraded.version}'")
+        machine.fail("test -e ${state}/backup")
+        machine.succeed("kubectl get configmap upgraded")
+        wait_ready()
   '';
 }

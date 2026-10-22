@@ -34,7 +34,10 @@ let
   };
 in
 {
-  imports = [ ./registries.nix ];
+  imports = [
+    ./registries.nix
+    ./upgrade.nix
+  ];
 
   options.services.kubesolo = {
     enable = lib.mkEnableOption "KubeSolo, a single-node Kubernetes distribution";
@@ -111,6 +114,8 @@ in
     warnings = lib.optional (cfg.settings.api.enabled or false) ''
       services.kubesolo: the configuration API cannot persist changes, because
       /etc/kubesolo/config.yaml is generated from services.kubesolo.settings.
+      Upgrades and rollbacks over the API abort, since the binary is in the Nix
+      store; change services.kubesolo.package instead.
     '';
 
     environment.systemPackages = [ cfg.package ] ++ lib.optional cfg.kubectl.enable kubectlWrapped;
@@ -155,6 +160,18 @@ in
 
       # KubeSolo reads its configuration only at startup.
       restartTriggers = [ configFile ];
+      # Restart after activation, under the new unit's KillMode, instead of stopping before it.
+      stopIfChanged = false;
+
+      # kube-proxy's nftables mode keeps the endpoint chains it finds at startup, and KubeSolo empties
+      # them as it stops, which leaves ClusterIPs rejecting new connections. Start from a fresh table.
+      preStart = ''
+        for family in ip ip6; do
+          if nft list table "$family" kube-proxy >/dev/null 2>&1; then
+            nft delete table "$family" kube-proxy
+          fi
+        done
+      '';
 
       path = with pkgs; [
         iptables
@@ -179,6 +196,10 @@ in
         EnvironmentFile = lib.optional (cfg.environmentFile != null) cfg.environmentFile;
         Restart = "always";
         RestartSec = 3;
+        # Shims start in this cgroup but their containers run in kubepods.slice. Keeping the shims lets
+        # the next start reattach to the pods; killing them makes kubelet start a second copy of each.
+        KillMode = "process";
+        Delegate = true;
         OOMScoreAdjust = -500;
         LimitNOFILE = 1048576;
         LimitNPROC = "infinity";
