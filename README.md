@@ -2,7 +2,7 @@
 
 Nix package and NixOS module for [KubeSolo](https://github.com/portainer/kubesolo), a single-node Kubernetes distribution.
 
-The package builds KubeSolo from source. The artifacts upstream embeds into the binary (containerd shim, crun, CNI plugins, CoreDNS and pause images) are pinned in [`pkgs/kubesolo/deps.nix`](pkgs/kubesolo/deps.nix) and match `build/download-deps.sh` at the packaged version. Supported platforms are `x86_64-linux` and `aarch64-linux`.
+The package builds KubeSolo from source. The artifacts upstream embeds into the binary (containerd shim, crun, CNI plugins, CoreDNS and pause images) are pinned in [`pkgs/kubesolo/deps.json`](pkgs/kubesolo/deps.json) and match `build/download-deps.sh` at the packaged version. Supported platforms are `x86_64-linux` and `aarch64-linux`.
 
 ## Usage
 
@@ -73,4 +73,11 @@ nix build .#kubesolo
 nix flake check   # includes a NixOS VM test that boots a node and runs a pod
 ```
 
-To update KubeSolo, bump `version`, the source hash and the Kubernetes version in `ldflags` (from `k8s.io/kubernetes` in `go.mod`) in `pkgs/kubesolo/default.nix`, sync `deps.nix` with the new `build/download-deps.sh`, then refresh `vendorHash`.
+To update KubeSolo to the latest release, or to a given version:
+
+```sh
+nix run .#kubesolo.updateScript
+nix run .#kubesolo.updateScript -- 1.2.2
+```
+
+The script regenerates `deps.json` from `build/download-deps.sh`, `types/const.go` and `go.mod` at the new tag, then runs `nix-update` for the version, source hash and `vendorHash`. It fails if `registry-hosts-for-image-pull.patch` no longer applies. Running it again at the same version re-pins the `portainer/pause:latest` image when upstream moves the tag. Check the result with `nix flake check`.
