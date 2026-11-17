@@ -53,13 +53,13 @@ let
 in
 buildGoModule (finalAttrs: {
   pname = "kubesolo";
-  version = "1.2.2";
+  version = "1.3.0";
 
   src = fetchFromGitHub {
     owner = "portainer";
     repo = "kubesolo";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-4A/EViOjcukKJJBkB5ZucBtp5w22aUn6nJKrFhqy0qc=";
+    hash = "sha256-H3ishLNmp1ayoUm9AbSjMl+4rvXJoJEq35e+bAUnoZA=";
   };
 
   patches = [
@@ -68,7 +68,7 @@ buildGoModule (finalAttrs: {
     ./registry-hosts-for-image-pull.patch
   ];
 
-  vendorHash = "sha256-+539wXXjfbMtFWx233LgvoNPCtxt5T9dng5mG1nXd3Q=";
+  vendorHash = "sha256-SGvy67ae/jIRjr5xkEj1XMD0EiUf8K6mgD1C1eQSlIU=";
 
   subPackages = [
     "cmd/kubesolo"

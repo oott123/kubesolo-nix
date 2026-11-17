@@ -1,12 +1,12 @@
 {
   "kubernetes": {
-    "version": "v1.35.7"
+    "version": "v1.36.6"
   },
   "containerd": {
-    "version": "2.2.5",
+    "version": "2.3.7",
     "hash": {
-      "amd64": "sha256-1AMVV3c6jpadYEtO6AnGTtPGzQJNONUh2TmE+hfTe4k=",
-      "arm64": "sha256-rT967BaOu66NJMQS/dLogG2WWZdX9gMuOJl9YqEIFYo="
+      "amd64": "sha256-CaG2aaxtIefiTDwzqYBbSJh7pYRejYjwOcRwE6DAAlw=",
+      "arm64": "sha256-4IUwxsiiPGEmBtpdKDKu2b7Y/H+MG0HfDxSKcBuTHWk="
     }
   },
   "crun": {
